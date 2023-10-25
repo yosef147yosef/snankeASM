@@ -1,7 +1,3 @@
-; -------------------------------------------------------------
-; Paint a red pixel in the center of the screen
-; Author: Barak Gonen 2014
-; -------------------------------------------------------------
 IDEAL
 MODEL small
 STACK 100h
