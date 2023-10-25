@@ -17,6 +17,9 @@ DATASEG
 	y dw 100
 	green db 2
 	black db 0
+	Clock equ es:6Ch
+	StartMessage db 'Counting 10 seconds. Start...',13,10,'$'
+	EndMessage db '...Stop.',13,10,'$'
 CODESEG
 proc OpenFile
 	; Open file
@@ -189,6 +192,7 @@ lineLoop:
 endp line
 proc thickPixel
 	mov cx,5
+	mov ax,[y]
 row:
 	push cx
 	push ax
@@ -201,9 +205,34 @@ row:
 	loop row
 	ret 
 endp thickPixel
+proc waitrSec
+	; wait for first change in timer
+	mov ax, 40h
+	mov es, ax
+	mov ax, [Clock]
+FirstTick :
+	cmp ax, [Clock]
+	je FirstTick
+	mov cx, 20 ; 20.055sec = ~10sec
+DelayLoop:
+	mov ax, [Clock]
+Tick :
+	cmp ax, [Clock]
+	je Tick
+	loop DelayLoop
+	ret
+endp waitrSec
 proc snake
-	
+	mov cx,5
+moving:
+	push cx
 	call thickPixel
+	call waitrSec
+	mov ax,[x]
+	add ax,5
+	mov [x],ax
+	pop cx
+	loop moving
 	ret 
 endp snake
 start :
