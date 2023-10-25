@@ -13,6 +13,10 @@ DATASEG
 	Palette db 256*4 dup (0)
 	ScrLine db 320 dup (0)
 	ErrorMsg db 'Error', 13, 10 ,'$'
+	x dw 160
+	y dw 100
+	green db 2
+	black db 0
 CODESEG
 proc OpenFile
 	; Open file
@@ -151,10 +155,57 @@ proc backround
 	call ReadPalette
 	call CopyPal
 	call CopyBitmap
-	mov ah,00h
-	int 16h
 	ret
 endp backround
+proc colorPixel;get x y cordinate and color the pixel black
+	push bp
+	mov bp,sp
+	mov bh,0h
+	mov cx,[bp+6]
+	mov dx,[bp+4]
+	mov al,[black]
+	mov ah,0ch
+	int 10h
+	pop bp
+	ret 4
+endp colorPixel
+proc line
+	push bp
+	mov bp,sp
+	mov cx,5;loop for color line of pixels to create basic unit for the snake
+	mov ax,[bp+6]
+lineLoop:
+	push cx
+	push ax;keep the registor for this function
+	push ax
+	push [bp+4]
+	call colorPixel
+	pop ax
+	pop cx
+	inc ax;add 1 to x cordinate
+	loop lineLoop
+	pop bp
+	ret 4
+endp line
+proc thickPixel
+	mov cx,5
+row:
+	push cx
+	push ax
+	push [x]
+	push ax
+	call line
+	pop ax
+	pop cx
+	inc ax
+	loop row
+	ret 
+endp thickPixel
+proc snake
+	
+	call thickPixel
+	ret 
+endp snake
 start :
 	mov ax, @data
 	mov ds, ax
@@ -163,6 +214,9 @@ start :
 	int 10h
 	call createStartingPage
 	call backround
+	call snake
+	mov ah , 1
+	int 21h
 	
 exit :
 	; Back to text mode
