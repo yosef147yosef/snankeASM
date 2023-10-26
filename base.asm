@@ -1,3 +1,7 @@
+; -------------------------------------------------------------
+; Paint a red pixel in the center of the screen
+; Author: Barak Gonen 2014
+; -------------------------------------------------------------
 IDEAL
 MODEL small
 STACK 100h
@@ -11,8 +15,8 @@ DATASEG
 	ErrorMsg db 'Error', 13, 10 ,'$'
 	x dw 160
 	y dw 100
-	green db 2
-	black db 0
+	green equ 2
+	black equ 0
 	Clock equ es:6Ch
 	StartMessage db 'Counting 10 seconds. Start...',13,10,'$'
 	EndMessage db '...Stop.',13,10,'$'
@@ -156,26 +160,28 @@ proc backround
 	call CopyBitmap
 	ret
 endp backround
-proc colorPixel;get x y cordinate and color the pixel black
+proc colorPixel;get color then x y cordinate and color the pixel black
 	push bp
 	mov bp,sp
 	mov bh,0h
 	mov cx,[bp+6]
 	mov dx,[bp+4]
-	mov al,[black]
+	mov al,[bp+8]
 	mov ah,0ch
 	int 10h
 	pop bp
-	ret 4
+	ret 6
 endp colorPixel
 proc line
-	push bp
+	push bp;get color first then cordinate
 	mov bp,sp
 	mov cx,5;loop for color line of pixels to create basic unit for the snake
 	mov ax,[bp+6]
 lineLoop:
-	push cx
+	push cx;keep cx for couting 
 	push ax;keep the registor for this function
+	
+	push [bp+8]
 	push ax
 	push [bp+4]
 	call colorPixel
@@ -184,22 +190,28 @@ lineLoop:
 	inc ax;add 1 to x cordinate
 	loop lineLoop
 	pop bp
-	ret 4
+	ret 6
 endp line
-proc thickPixel
+proc thickPixel;get color 
+	push bp
+	mov bp,sp
 	mov cx,5
 	mov ax,[y]
 row:
-	push cx
-	push ax
+	push cx;keep cx as is for the Counting
+	push ax;keep ax for the after 
+	push [bp+4]
 	push [x]
 	push ax
 	call line
-	pop ax
+	
+	pop ax;get back the function registers values
 	pop cx
+	
 	inc ax
 	loop row
-	ret 
+	pop bp
+	ret 2
 endp thickPixel
 proc waitrSec
 	; wait for first change in timer
@@ -221,9 +233,12 @@ endp waitrSec
 proc snake
 	mov cx,5
 moving:
-	push cx
+	push cx;keep cx as is for couting
+	push black
 	call thickPixel
 	call waitrSec
+	push green
+	call thickPixel
 	mov ax,[x]
 	add ax,5
 	mov [x],ax
