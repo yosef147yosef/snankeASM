@@ -16,6 +16,8 @@ DATASEG
 	Clock equ es:6Ch
 	StartMessage db 'Counting 10 seconds. Start...',13,10,'$'
 	EndMessage db '...Stop.',13,10,'$'
+	score dw 3
+	diraction dw "+x"
 CODESEG
 proc OpenFile
 	; Open file
@@ -66,7 +68,8 @@ proc CopyPal
 	; Copy palette itself to port 3C9h
 	inc dx
 PalLoop:
-	; Note: Colors in a BMP file are saved as BGR values rather than RGB .
+	; Note: Colors in a BMP file are saved as
+	BGR values rather than RGB .
 	mov al,[si+2] ; Get red value .
 	shr al,2 ; Max. is 255, but video palette maximal
 	; value is 63. Therefore dividing by 4.
@@ -226,14 +229,49 @@ Tick :
 	loop DelayLoop
 	ret
 endp waitrSec
-
-proc snake
-	mov cx,100
-	lea di,[x]
-	mov bx,5
-	jmp moving
-changeDir:
-	dec cx
+proc moveSnake
+	cmp [diraction],"+X"
+	je plusX
+	cmp [diraction], "-X"
+	je minusX
+	cmp [diraction],"+Y"
+	je plusY
+	cmp [diraction],"-Y"
+	je minusY
+plusX:
+	mov ax,[x]
+	add ax,5
+	mov [x],ax
+	ret
+minusX:
+	mov ax,[x]
+	sub ax,5
+	mov [x],ax
+	ret
+plusY:
+	mov ax,[y]
+	add ax,5
+	mov [y],ax
+	ret
+minusY:
+	mov ax,[y]
+	sub ax,5
+	mov [y],ax
+	ret
+endp moveSnake
+proc paintSnake
+	mov cx,[score]
+paintSnakeLoop:
+	push cx
+	push black
+	call thickPixel
+	
+	call moveSnake
+	pop cx
+	loop paintSnakeLoop
+	ret
+endp paintSnake
+proc changeDirProc
 	mov ah, 0
 	int 16h
 	cmp ah,77;check if right buttom
@@ -246,42 +284,42 @@ changeDir:
 	je downButtom
 	cmp ah,1;check if escape
 	je escapeButtom
-	jmp moving;if other buttom keep going 
+	ret;for other buttoms
 escapeButtom:
-	ret
+	pop ax;release returinig adress
+	jmp exit 
 upButtom:
-	lea di,[y]
-	mov bx,-5
-	jmp moving
+	mov ax,"-Y"
+	jmp endChangeDirProc
 downButtom:
-	lea di,[y]
-	mov bx,5
-	jmp moving
+	mov ax,"+Y"
+	jmp endChangeDirProc
 leftButtom:
-	lea di,[x]
-	mov bx,-5
-	jmp moving
+	mov ax, "-X"
+	jmp endChangeDirProc
 rightButtom:
-	lea di,[x]
-	mov bx,5
+	mov ax, "+X"
+endChangeDirProc:
+	mov [diraction],ax
+	ret
+endp changeDirProc
+proc snake
+	call paintSnake
+	call changeDirProc
+	jmp moving
+changeDir:
+	call changeDirProc
 moving:
-	push cx;keep cx as is for couting
-	push di;keep di as is for diraction
-	push bx;keep bx as is for diraction
+	
 	push black
 	call thickPixel
 	call waitrSec
-	push green
-	call thickPixel
-	pop bx
-	pop di
-	mov ax,[word ptr di]
-	add ax,bx
-	mov [word ptr di],ax
-	pop cx
+	call moveSnake
 	mov ah,1
 	int 16h
-	jnz changeDir
+	jz skip
+	jmp changeDir
+skip:	
 	loop moving
 	ret 
 endp snake
