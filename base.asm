@@ -1,7 +1,3 @@
-; -------------------------------------------------------------
-; Paint a red pixel in the center of the screen
-; Author: Barak Gonen 2014
-; -------------------------------------------------------------
 IDEAL
 MODEL small
 STACK 100h
@@ -230,19 +226,62 @@ Tick :
 	loop DelayLoop
 	ret
 endp waitrSec
+
 proc snake
-	mov cx,5
+	mov cx,100
+	lea di,[x]
+	mov bx,5
+	jmp moving
+changeDir:
+	dec cx
+	mov ah, 0
+	int 16h
+	cmp ah,77;check if right buttom
+	je rightButtom
+	cmp ah,75;check if left buttom
+	je leftButtom
+	cmp ah,72;check if up buttom
+	je upButtom
+	cmp ah,80;check if down buttom
+	je downButtom
+	cmp ah,1;check if escape
+	je escapeButtom
+	jmp moving;if other buttom keep going 
+escapeButtom:
+	ret
+upButtom:
+	lea di,[y]
+	mov bx,-5
+	jmp moving
+downButtom:
+	lea di,[y]
+	mov bx,5
+	jmp moving
+leftButtom:
+	lea di,[x]
+	mov bx,-5
+	jmp moving
+rightButtom:
+	lea di,[x]
+	mov bx,5
 moving:
 	push cx;keep cx as is for couting
+	push di;keep di as is for diraction
+	push bx;keep bx as is for diraction
 	push black
 	call thickPixel
 	call waitrSec
 	push green
 	call thickPixel
-	mov ax,[x]
-	add ax,5
-	mov [x],ax
+	pop bx
+	pop di
+	mov ax,[word ptr di]
+	add ax,bx
+	mov [word ptr di],ax
 	pop cx
+	mov ah,1
+	int 16h
+	jnz changeDir
 	loop moving
 	ret 
 endp snake
