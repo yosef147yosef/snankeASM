@@ -13,6 +13,7 @@ DATASEG
 	y dw 100
 	green equ 2
 	black equ 0
+	red equ 1
 	Clock equ es:6Ch
 	StartMessage db 'Counting 10 seconds. Start...',13,10,'$'
 	EndMessage db '...Stop.',13,10,'$'
@@ -24,7 +25,18 @@ DATASEG
 	tail dw 0;the index of the last cordinate
 	xToRemove dw ?
 	yToRemove dw ?
+	isEaten dw 0
+	xApple dw ?
+	yApple dw ?
+	Loose dw 0
 CODESEG
+proc createRandomCordinate
+	mov dx, [Clock] ; read timer counter
+	mov ax, [word cs:bx] ; read one byte from memory
+	xor ax, dx ; xor memory and counter
+	and ax, 0FFh ; leave results between 0-255
+	ret 
+endp createRandomCordinate
 proc modluAx
 	cmp ax, [maxSize]
 	jna skipSub
@@ -269,7 +281,7 @@ proc waitrSec
 FirstTick :
 	cmp ax, [Clock]
 	je FirstTick
-	mov cx, 20 ; 20.055sec = ~10sec
+	mov cx, 10 ; 20.055sec = ~10sec
 DelayLoop:
 	mov ax, [Clock]
 Tick :
@@ -278,6 +290,25 @@ Tick :
 	loop DelayLoop
 	ret
 endp waitrSec
+proc checkIfAppleEaten
+	mov bh,0h
+	mov cx,[x]
+	mov dx,[y]
+	mov ah,0Dh
+	int 10h ; return al the pixel value read
+	cmp al,red
+	jne notEated
+	mov ax,1
+	mov [isEaten] ,ax
+	jmp notLoose
+notEated:
+	cmp al,black
+	jne notLoose
+	mov ax,1
+	mov [Loose],ax
+notLoose:
+	ret
+endp checkIfAppleEaten
 proc moveSnake
 
 	cmp [diraction],"+X"
@@ -292,21 +323,25 @@ plusX:
 	mov ax,[x]
 	add ax,5
 	mov [x],ax
+	call checkIfAppleEaten
 	ret
 minusX:
 	mov ax,[x]
 	sub ax,5
 	mov [x],ax
+	call checkIfAppleEaten
 	ret
 plusY:
 	mov ax,[y]
 	add ax,5
 	mov [y],ax
+	call checkIfAppleEaten
 	ret
 minusY:
 	mov ax,[y]
 	sub ax,5
 	mov [y],ax
+	call checkIfAppleEaten
 	ret
 endp moveSnake
 proc paintSnake
@@ -355,41 +390,115 @@ escapeButtom:
 	pop ax;release returinig adress
 	jmp exit 
 upButtom:
+	cmp [diraction],"+Y"
+	je notValid
+	cmp [diraction],"-Y"
+	je notValid
 	mov ax,"-Y"
 	jmp endChangeDirProc
 downButtom:
+	cmp [diraction],"+Y"
+	je notValid
+	cmp [diraction], "-Y"
+	je notValid
 	mov ax,"+Y"
 	jmp endChangeDirProc
 leftButtom:
+	cmp [diraction],"+X"
+	je notValid
+	cmp [diraction], "-X"
+	je notValid
 	mov ax, "-X"
 	jmp endChangeDirProc
 rightButtom:
-	mov ax, "+X"
+	cmp ax,"+X"
+	je notValid
+	cmp ax,"-X"
+	je notValid
+	mov ax,"+X"
+notValid:
 endChangeDirProc:
 	mov [diraction],ax
 	ret
 endp changeDirProc
+proc drawApple
+	push [x]
+	push [y]
+	mov bx,[xApple]
+	mov [x],bx
+	mov bx,[yApple]
+	mov [y],bx
+	push red
+	call thickPixel
+	pop [y]
+	pop [x]
+	ret
+endp drawApple
+proc eraseApple
+	push [x]
+	push [y]
+	mov ax,[xApple]
+	mov [x],ax
+	mov ax,[yApple]
+	mov [y],ax
+	push green
+	call thickPixel
+	pop [y]
+	pop [x]
+	ret
+endp eraseApple
 proc snake
+	call createRandomCordinate
+	mov [xApple],ax
+	call createRandomCordinate
+	mov [yApple],ax
 	call paintSnake
 	call changeDirProc
+	call drawApple
 	jmp moving
 changeDir:
 	call changeDirProc
 moving:
 	push black
 	call thickPixel
+	cmp [Loose],1
+	je LooseLable
 	call waitrSec
 	push [x]
 	push [y]
 	call insertPixelForErase
 	call moveSnake
+	cmp [isEaten],1
+	je dontRemoveTailOfSnake
 	call removeTailOfSnake
+	jmp dontDrawApple
+dontRemoveTailOfSnake:
+	call eraseApple
+recreateRandomCordinate:
+	call createRandomCordinate
+	sub ax,[xApple]
+	cmp ax,30
+	jb recreateRandomCordinate
+	mov [xApple],ax
+	call createRandomCordinate
+	sub ax,[xApple]
+	cmp ax,30
+	jb recreateRandomCordinate
+	mov [yApple],ax
+	call drawApple
+	mov ax,[score]
+	inc ax
+	mov [score],ax
+	mov ax,0
+	mov [isEaten],ax
+dontDrawApple:
 	mov ah,1
 	int 16h
 	jz skip
 	jmp changeDir
 skip:	
 	loop moving
+LooseLable:
 	ret 
 endp snake
 start :
