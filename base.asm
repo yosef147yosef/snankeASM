@@ -118,8 +118,7 @@ proc CopyPal
 	; Copy palette itself to port 3C9h
 	inc dx
 PalLoop:
-	; Note: Colors in a BMP file are saved as
-	BGR values rather than RGB .
+	; Note: Colors in a BMP file are saved as BGR values rather than RGB .
 	mov al,[si+2] ; Get red value .
 	shr al,2 ; Max. is 255, but video palette maximal
 	; value is 63. Therefore dividing by 4.
@@ -280,6 +279,7 @@ Tick :
 	ret
 endp waitrSec
 proc moveSnake
+
 	cmp [diraction],"+X"
 	je plusX
 	cmp [diraction], "-X"
@@ -315,12 +315,28 @@ paintSnakeLoop:
 	push cx
 	push black
 	call thickPixel
-	
+	push [x]
+	push [y]
+	call insertPixelForErase
 	call moveSnake
 	pop cx
 	loop paintSnakeLoop
 	ret
 endp paintSnake
+proc removeTailOfSnake
+	call getPixelToRemove
+	push [x]
+	push [y]
+	mov bx,[xToRemove]
+	mov [x],bx
+	mov bx,[yToRemove]
+	mov [y],bx
+	push green
+	call thickPixel
+	pop [y]
+	pop [x]
+	ret
+endp removeTailOfSnake
 proc changeDirProc
 	mov ah, 0
 	int 16h
@@ -360,11 +376,14 @@ proc snake
 changeDir:
 	call changeDirProc
 moving:
-	
 	push black
 	call thickPixel
 	call waitrSec
+	push [x]
+	push [y]
+	call insertPixelForErase
 	call moveSnake
+	call removeTailOfSnake
 	mov ah,1
 	int 16h
 	jz skip
