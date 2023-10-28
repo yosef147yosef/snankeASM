@@ -18,7 +18,57 @@ DATASEG
 	EndMessage db '...Stop.',13,10,'$'
 	score dw 3
 	diraction dw "+x"
+	maxSize dw 400;in bytes
+	erasePixels dw 200 dup(?)
+	front dw 0
+	tail dw 0;the index of the last cordinate
+	xToRemove dw ?
+	yToRemove dw ?
 CODESEG
+proc modluAx
+	cmp ax, [maxSize]
+	jna skipSub
+	sub ax,[maxSize]
+skipSub:
+	ret 
+endp modluAx
+proc insertPixelForErase ;get x y cordinate
+	push bp
+	mov bp,sp
+	mov ax,[tail]
+	lea di,[erasePixels]
+	add di,ax;adress for insert
+	mov bx, [bp+6]
+	mov [word ptr di],bx;insert x cordinate
+	add ax,2
+	call modluAx
+	lea di,[erasePixels]
+	add di , ax
+	mov bx,[bp+4]
+	mov [word ptr di ],bx;insert y cordinte
+	add ax,2
+	call modluAx
+	mov [tail],ax;update tail for next insert
+	pop bp
+	ret 4
+endp insertPixelForErase
+proc getPixelToRemove
+	lea di , [erasePixels]
+	mov ax,[front]
+	add di,ax
+	mov bx,[word ptr di ]; get the x to remove
+	mov [xToRemove],bx
+	add ax,2
+	call modluAx
+	lea di, [erasePixels]
+	add di, ax
+	mov bx,[word ptr di]
+	mov [yToRemove],bx
+	add ax,2
+	call modluAx
+	mov [front],ax
+	ret
+endp getPixelToRemove
 proc OpenFile
 	; Open file
 	push bp
