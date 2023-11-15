@@ -20,7 +20,7 @@ DATASEG
 	score dw 3
 	diraction dw "+x"
 	maxSize dw 400;in bytes
-	erasePixels dw 200 dup(?)
+	erasePixels dw 400 dup(?)
 	front dw 0
 	tail dw 0;the index of the last cordinate
 	xToRemove dw ?
@@ -240,7 +240,6 @@ proc line
 lineLoop:
 	push cx;keep cx for couting 
 	push ax;keep the registor for this function
-	
 	push [bp+8]
 	push ax
 	push [bp+4]
@@ -281,7 +280,7 @@ proc waitrSec
 FirstTick :
 	cmp ax, [Clock]
 	je FirstTick
-	mov cx, 10 ; 20.055sec = ~10sec
+	mov cx, 5 
 DelayLoop:
 	mov ax, [Clock]
 Tick :
